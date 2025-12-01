@@ -225,6 +225,9 @@ else()
     target_link_libraries(SpaceCadetPinball ${SDL2_LIBRARY} ${SDL2_MIXER_LIBRARY})
 endif()
 
+# Link stdc++fs for filesystem support
+target_link_libraries(SpaceCadetPinball stdc++fs)
+
 # On Windows, copy DLL to output
 if(WIN32)
     list(GET SDL2_LIBRARY -1 SDL2_DLL_PATH)
