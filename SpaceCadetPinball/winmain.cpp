@@ -10,7 +10,9 @@
 #include "render.h"
 #include "Sound.h"
 #include "translations.h"
+
 #include "font_selection.h"
+#include "font_finder.h"
 
 constexpr const char* winmain::Version;
 
@@ -170,31 +172,32 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 			options::ResetAllOptions();
 		}
 
-		if (!Options.FontFileName.V.empty())
+		// 自动查找支持中文的字体
+		std::string fontPath = Options.FontFileName.V;
+		if (fontPath.empty()) {
+			// 以“汉”字为测试，查找系统字体
+			fontPath = FindFontWithGlyph("汉");
+			if (!fontPath.empty()) {
+				printf("Auto selected font for Chinese: %s\n", fontPath.c_str());
+			}
+		}
+		if (!fontPath.empty())
 		{
 			ImVector<ImWchar> ranges;
 			translations::GetGlyphRange(&ranges);
 			ImFontConfig fontConfig{};
-
-			// ToDo: further tweak font options, maybe try imgui_freetype
 			fontConfig.OversampleV = 2;
 			fontConfig.OversampleH = 4;
-
-			// ToDo: improve font file test, checking if file exists is not enough
 			auto fontLoaded = false;
-			auto fileName = Options.FontFileName.V.c_str();
-			auto fileHandle = fopenu(fileName, "rb");
+			auto fileHandle = fopenu(fontPath.c_str(), "rb");
 			if (fileHandle)
 			{
 				fclose(fileHandle);
-
-				// ToDo: Bind font size to UI scale
-				if (io.Fonts->AddFontFromFileTTF(fileName, 13.f, &fontConfig, ranges.Data))
+				if (io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 13.f, &fontConfig, ranges.Data))
 					fontLoaded = true;
 			}
-
 			if (!fontLoaded)
-				printf("Failed to load font: %s, using embedded font.\n", fileName);
+				printf("Failed to load font: %s, using embedded font.\n请确保系统有支持中文的字体。\n", fontPath.c_str());
 			io.Fonts->Build();
 		}
 		ImGui_Render_Init(renderer);
