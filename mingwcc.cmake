@@ -23,5 +23,30 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 # search programs in the host environment
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
-# Add the path to your toolchain version of SDL2
+# Add the path to your toolchain version of SDL2 (default)
 set(SDL2_PATH /usr/${TOOLCHAIN_PREFIX})
+
+# If this project vendored MinGW SDL2 development files under a Libs
+# directory (e.g. `Libs/SDL2/x86_64-w64-mingw32`), prefer that path so
+# users don't need to pass SDL2 paths on every CMake invocation.
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32")
+	set(SDL2_PATH "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32")
+	set(SDL2_MIXER_PATH "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32")
+endif()
+
+# If the project carries a complete mingw dev tree under Libs, populate
+# the SDL2 cache variables so CMake's find module will see them even when
+# the find_root_path mode restricts regular searching.
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32")
+	set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/include" CACHE PATH "SDL2 include dir")
+	set(SDL2_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/lib/libSDL2.a" CACHE FILEPATH "SDL2 library")
+	set(SDL2_LIBRARY_TEMP "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/lib/libSDL2.a" CACHE INTERNAL "")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32")
+	set(SDL2_MIXER_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32/include" CACHE PATH "SDL2_mixer include dir")
+	set(SDL2_MIXER_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32/lib/libSDL2_mixer.a" CACHE FILEPATH "SDL2_mixer library")
+endif()
