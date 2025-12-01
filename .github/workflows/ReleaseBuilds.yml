@@ -10,7 +10,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: install dependencies
-        run: sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev cmake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev cmake
 
       - name: build
         run: |
