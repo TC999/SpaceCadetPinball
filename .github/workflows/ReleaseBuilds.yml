@@ -27,7 +27,7 @@ jobs:
           path: bin/SpaceCadetPinball
 
   build-macos:
-    runs-on: macos-12
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -44,3 +44,35 @@ jobs:
         with:
           name: mac-build
           path: SpaceCadetPinball-*-mac.dmg
+
+  build-windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 cmake libsdl2-dev libsdl2-mixer-dev
+
+      - name: install sdl2 dll
+        run: |
+          wget https://github.com/libsdl-org/SDL/releases/download/release-2.32.2/SDL2-devel-2.32.2-mingw.tar.gz -O sdl2.tar.gz
+          wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-devel-2.8.1-mingw.tar.gz -O sdl2_mixer.tar.gz
+          mkdir -p Libs
+          tar -xvf sdl2_mixer.tar.gz -C Libs
+          mv Libs/SDL2_mixer-* Libs/SDL2_mixer
+          tar -xvf sdl2.tar.gz -C Libs
+          mv Libs/SDL2-* Libs/SDL2
+
+      - name: build
+        run: |
+          mkdir build
+          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=./mingwcc.cmake
+          cmake --build build -j
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: bin/*
