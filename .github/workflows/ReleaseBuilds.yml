@@ -3,6 +3,27 @@ name: Make Release Builds
 on: [workflow_dispatch]
 
 jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev cmake
+
+      - name: build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: bin/SpaceCadetPinball
+
   build-macos:
     runs-on: macos-12
     timeout-minutes: 15
