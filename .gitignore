@@ -306,3 +306,4 @@ build.ninja
 
 # Downloaded archives
 *.tar.gz
+_codeql_detected_source_root
