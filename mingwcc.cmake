@@ -41,12 +41,12 @@ endif()
 # the SDL2 cache variables so CMake's find module will see them even when
 # the find_root_path mode restricts regular searching.
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32")
-	set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/include" CACHE PATH "SDL2 include dir")
+	set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/include/SDL2" CACHE PATH "SDL2 include dir")
 	set(SDL2_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/lib/libSDL2.a" CACHE FILEPATH "SDL2 library")
 	set(SDL2_LIBRARY_TEMP "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2/x86_64-w64-mingw32/lib/libSDL2.a" CACHE INTERNAL "")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32")
-	set(SDL2_MIXER_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32/include" CACHE PATH "SDL2_mixer include dir")
+	set(SDL2_MIXER_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32/include/SDL2" CACHE PATH "SDL2_mixer include dir")
 	set(SDL2_MIXER_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/Libs/SDL2_mixer/x86_64-w64-mingw32/lib/libSDL2_mixer.a" CACHE FILEPATH "SDL2_mixer library")
 endif()
