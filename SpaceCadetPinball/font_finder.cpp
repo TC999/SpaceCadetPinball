@@ -6,7 +6,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <filesystem>
 #else
 #include <dirent.h>
 #include <sys/stat.h>
@@ -58,7 +57,52 @@ static bool IsValidPath(const std::string& path)
     return true;
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
+// Windows: Recursively search directory for fonts with depth limiting
+static std::string SearchDirForFont(const std::string& dirPath, const std::string& testChar, int depth = 0)
+{
+    if (depth > MAX_SEARCH_DEPTH || dirPath.empty())
+        return "";
+
+    WIN32_FIND_DATAA findData;
+    std::string searchPath = dirPath + "\\*";
+    HANDLE hFind = FindFirstFileA(searchPath.c_str(), &findData);
+    if (hFind == INVALID_HANDLE_VALUE)
+        return "";
+
+    std::string result;
+    do
+    {
+        std::string name = findData.cFileName;
+        if (name == "." || name == "..")
+            continue;
+
+        std::string fullPath = dirPath + "\\" + name;
+
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+            // Skip reparse points (junctions/symlinks) to prevent cycles
+            if (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+                continue;
+            // Recursively search subdirectories
+            result = SearchDirForFont(fullPath, testChar, depth + 1);
+            if (!result.empty())
+                break;
+        }
+        else
+        {
+            if (HasFontExtension(fullPath) && FontHasGlyph(fullPath, testChar))
+            {
+                result = fullPath;
+                break;
+            }
+        }
+    } while (FindNextFileA(hFind, &findData));
+
+    FindClose(hFind);
+    return result;
+}
+#else
 // Linux/macOS: Recursively search directory for fonts with depth limiting
 static std::string SearchDirForFont(const std::string& dirPath, const std::string& testChar, int depth = 0)
 {
@@ -116,18 +160,13 @@ std::string FindFontWithGlyph(const std::string& testChar)
     const char* windir = getenv("WINDIR");
     if (windir && IsValidPath(windir))
         fontDirs.push_back(std::string(windir) + "\\Fonts");
-    fontDirs.push_back("C:/Windows/Fonts");
+    fontDirs.push_back("C:\\Windows\\Fonts");
 
     for (const auto& dir : fontDirs)
     {
-        if (!std::filesystem::exists(dir)) continue;
-        for (const auto& entry : std::filesystem::directory_iterator(dir))
-        {
-            if (!entry.is_regular_file()) continue;
-            std::string path = entry.path().string();
-            if (HasFontExtension(path) && FontHasGlyph(path, testChar))
-                return path;
-        }
+        std::string found = SearchDirForFont(dir, testChar);
+        if (!found.empty())
+            return found;
     }
 #elif defined(__APPLE__)
     // macOS 常见字体目录
