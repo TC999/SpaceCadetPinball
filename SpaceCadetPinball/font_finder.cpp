@@ -1,10 +1,16 @@
 #include "font_finder.h"
 #include <vector>
 #include <string>
-#include <filesystem>
-#include <fstream>
+#include <algorithm>
+#include <cstdlib>
+
+#ifdef _WIN32
 #include <windows.h>
-#include <wingdi.h>
+#include <filesystem>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
 
 // 检查字体文件是否包含指定字符
 static bool FontHasGlyph(const std::string& fontPath, const std::string& testChar)
@@ -19,18 +25,80 @@ static bool FontHasGlyph(const std::string& fontPath, const std::string& testCha
         lower.find("song") != std::string::npos || lower.find("kai") != std::string::npos ||
         lower.find("yahei") != std::string::npos || lower.find("deng") != std::string::npos ||
         lower.find("pingfang") != std::string::npos || lower.find("sourcehansans") != std::string::npos ||
-        lower.find("sourcehanserif") != std::string::npos)
+        lower.find("sourcehanserif") != std::string::npos || lower.find("wqy") != std::string::npos ||
+        lower.find("wenquanyi") != std::string::npos || lower.find("cjk") != std::string::npos ||
+        lower.find("arphic") != std::string::npos || lower.find("uming") != std::string::npos ||
+        lower.find("ukai") != std::string::npos)
         return true;
     return false;
 }
 
+static bool HasFontExtension(const std::string& path)
+{
+    std::vector<std::string> fontExts = { ".ttf", ".ttc", ".otf" };
+    for (const auto& ext : fontExts)
+    {
+        if (path.size() > ext.size() && path.substr(path.size() - ext.size()) == ext)
+            return true;
+    }
+    return false;
+}
+
+#ifndef _WIN32
+// Linux/macOS: Recursively search directory for fonts
+static std::string SearchDirForFont(const std::string& dirPath, const std::string& testChar)
+{
+    DIR* dir = opendir(dirPath.c_str());
+    if (!dir)
+        return "";
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr)
+    {
+        std::string name = entry->d_name;
+        if (name == "." || name == "..")
+            continue;
+
+        std::string fullPath = dirPath + "/" + name;
+        struct stat statbuf;
+        if (stat(fullPath.c_str(), &statbuf) != 0)
+            continue;
+
+        if (S_ISDIR(statbuf.st_mode))
+        {
+            // Recursively search subdirectories
+            std::string found = SearchDirForFont(fullPath, testChar);
+            if (!found.empty())
+            {
+                closedir(dir);
+                return found;
+            }
+        }
+        else if (S_ISREG(statbuf.st_mode))
+        {
+            if (HasFontExtension(fullPath) && FontHasGlyph(fullPath, testChar))
+            {
+                closedir(dir);
+                return fullPath;
+            }
+        }
+    }
+    closedir(dir);
+    return "";
+}
+#endif
+
 std::string FindFontWithGlyph(const std::string& testChar)
 {
+    std::vector<std::string> fontDirs;
+
+#ifdef _WIN32
     // Windows 常见字体目录
-    std::vector<std::string> fontDirs = {
-        std::string(getenv("WINDIR")) + "\\Fonts",
-        "C:/Windows/Fonts"
-    };
+    const char* windir = getenv("WINDIR");
+    if (windir)
+        fontDirs.push_back(std::string(windir) + "\\Fonts");
+    fontDirs.push_back("C:/Windows/Fonts");
+
     std::vector<std::string> fontExts = { ".ttf", ".ttc", ".otf" };
     for (const auto& dir : fontDirs)
     {
@@ -39,15 +107,45 @@ std::string FindFontWithGlyph(const std::string& testChar)
         {
             if (!entry.is_regular_file()) continue;
             std::string path = entry.path().string();
-            for (const auto& ext : fontExts)
-            {
-                if (path.size() > ext.size() && path.substr(path.size() - ext.size()) == ext)
-                {
-                    if (FontHasGlyph(path, testChar))
-                        return path;
-                }
-            }
+            if (HasFontExtension(path) && FontHasGlyph(path, testChar))
+                return path;
         }
     }
+#elif defined(__APPLE__)
+    // macOS 常见字体目录
+    fontDirs.push_back("/System/Library/Fonts");
+    fontDirs.push_back("/Library/Fonts");
+    const char* home = getenv("HOME");
+    if (home)
+        fontDirs.push_back(std::string(home) + "/Library/Fonts");
+
+    for (const auto& dir : fontDirs)
+    {
+        std::string found = SearchDirForFont(dir, testChar);
+        if (!found.empty())
+            return found;
+    }
+#else
+    // Linux 常见字体目录
+    fontDirs.push_back("/usr/share/fonts");
+    fontDirs.push_back("/usr/local/share/fonts");
+    const char* home = getenv("HOME");
+    if (home)
+    {
+        fontDirs.push_back(std::string(home) + "/.fonts");
+        fontDirs.push_back(std::string(home) + "/.local/share/fonts");
+    }
+    // XDG_DATA_HOME 支持
+    const char* xdgDataHome = getenv("XDG_DATA_HOME");
+    if (xdgDataHome)
+        fontDirs.push_back(std::string(xdgDataHome) + "/fonts");
+
+    for (const auto& dir : fontDirs)
+    {
+        std::string found = SearchDirForFont(dir, testChar);
+        if (!found.empty())
+            return found;
+    }
+#endif
     return "";
 }
