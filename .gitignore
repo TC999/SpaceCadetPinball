@@ -303,3 +303,7 @@ build.ninja
 
 # vscode
 .vscode
+
+# Downloaded archives
+*.tar.gz
+_codeql_detected_source_root
