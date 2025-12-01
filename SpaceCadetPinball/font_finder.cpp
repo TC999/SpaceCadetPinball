@@ -12,6 +12,9 @@
 #include <sys/stat.h>
 #endif
 
+// Maximum depth for recursive directory search to prevent stack overflow
+static const int MAX_SEARCH_DEPTH = 10;
+
 // 检查字体文件是否包含指定字符
 static bool FontHasGlyph(const std::string& fontPath, const std::string& testChar)
 {
@@ -44,14 +47,29 @@ static bool HasFontExtension(const std::string& path)
     return false;
 }
 
-#ifndef _WIN32
-// Linux/macOS: Recursively search directory for fonts
-static std::string SearchDirForFont(const std::string& dirPath, const std::string& testChar)
+// Validate path doesn't contain path traversal sequences
+static bool IsValidPath(const std::string& path)
 {
+    if (path.empty())
+        return false;
+    // Check for path traversal patterns
+    if (path.find("..") != std::string::npos)
+        return false;
+    return true;
+}
+
+#ifndef _WIN32
+// Linux/macOS: Recursively search directory for fonts with depth limiting
+static std::string SearchDirForFont(const std::string& dirPath, const std::string& testChar, int depth = 0)
+{
+    if (depth > MAX_SEARCH_DEPTH || dirPath.empty())
+        return "";
+
     DIR* dir = opendir(dirPath.c_str());
     if (!dir)
         return "";
 
+    std::string result;
     struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr)
     {
@@ -61,30 +79,31 @@ static std::string SearchDirForFont(const std::string& dirPath, const std::strin
 
         std::string fullPath = dirPath + "/" + name;
         struct stat statbuf;
-        if (stat(fullPath.c_str(), &statbuf) != 0)
+        if (lstat(fullPath.c_str(), &statbuf) != 0)
+            continue;
+
+        // Skip symbolic links to prevent cycles
+        if (S_ISLNK(statbuf.st_mode))
             continue;
 
         if (S_ISDIR(statbuf.st_mode))
         {
             // Recursively search subdirectories
-            std::string found = SearchDirForFont(fullPath, testChar);
-            if (!found.empty())
-            {
-                closedir(dir);
-                return found;
-            }
+            result = SearchDirForFont(fullPath, testChar, depth + 1);
+            if (!result.empty())
+                break;
         }
         else if (S_ISREG(statbuf.st_mode))
         {
             if (HasFontExtension(fullPath) && FontHasGlyph(fullPath, testChar))
             {
-                closedir(dir);
-                return fullPath;
+                result = fullPath;
+                break;
             }
         }
     }
     closedir(dir);
-    return "";
+    return result;
 }
 #endif
 
@@ -95,11 +114,10 @@ std::string FindFontWithGlyph(const std::string& testChar)
 #ifdef _WIN32
     // Windows 常见字体目录
     const char* windir = getenv("WINDIR");
-    if (windir)
+    if (windir && IsValidPath(windir))
         fontDirs.push_back(std::string(windir) + "\\Fonts");
     fontDirs.push_back("C:/Windows/Fonts");
 
-    std::vector<std::string> fontExts = { ".ttf", ".ttc", ".otf" };
     for (const auto& dir : fontDirs)
     {
         if (!std::filesystem::exists(dir)) continue;
@@ -116,7 +134,7 @@ std::string FindFontWithGlyph(const std::string& testChar)
     fontDirs.push_back("/System/Library/Fonts");
     fontDirs.push_back("/Library/Fonts");
     const char* home = getenv("HOME");
-    if (home)
+    if (home && IsValidPath(home))
         fontDirs.push_back(std::string(home) + "/Library/Fonts");
 
     for (const auto& dir : fontDirs)
@@ -130,14 +148,14 @@ std::string FindFontWithGlyph(const std::string& testChar)
     fontDirs.push_back("/usr/share/fonts");
     fontDirs.push_back("/usr/local/share/fonts");
     const char* home = getenv("HOME");
-    if (home)
+    if (home && IsValidPath(home))
     {
         fontDirs.push_back(std::string(home) + "/.fonts");
         fontDirs.push_back(std::string(home) + "/.local/share/fonts");
     }
     // XDG_DATA_HOME 支持
     const char* xdgDataHome = getenv("XDG_DATA_HOME");
-    if (xdgDataHome)
+    if (xdgDataHome && IsValidPath(xdgDataHome))
         fontDirs.push_back(std::string(xdgDataHome) + "/fonts");
 
     for (const auto& dir : fontDirs)
