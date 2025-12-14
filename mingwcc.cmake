@@ -13,7 +13,7 @@ set(ASSEMBLER "${TOOLCHAIN_PREFIX}-as")
 set(CMAKE_RC_COMPILER "${TOOLCHAIN_PREFIX}-windres")
 
 
-set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
+set(CMAKE_FIND_ROOT_PATH /usr/local/${TOOLCHAIN_PREFIX})
 
 # adjust the default behavior of the find commands:
 # search headers and libraries in the target environment
@@ -24,4 +24,4 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
 # Add the path to your toolchain version of SDL2
-set(SDL2_PATH /usr/${TOOLCHAIN_PREFIX})
+set(SDL2_PATH /usr/local/${TOOLCHAIN_PREFIX})
