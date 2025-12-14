@@ -59,4 +59,4 @@ jobs:
         shell: cmd {0}
         run: |
           call "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"
-          powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\BuildForWindows.ps1"
+          powershell -NoProfile -ExecutionPolicy Bypass -File "BuildForWindows.ps1"
