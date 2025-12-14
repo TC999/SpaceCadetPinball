@@ -44,19 +44,30 @@ jobs:
           path: SpaceCadetPinball-*-mac.dmg
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-  
-      - name: Find Visual Studio installation path
-        shell: pwsh
+
+      - name: install dependencies
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64 cmake
+
+      - name: install sdl2 dll
         run: |
-          $vsPath = & 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe' -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-          echo "VSINSTALLDIR=$vsPath" >> $env:GITHUB_ENV
-  
-      - name: Run PowerShell script under Developer Command Prompt
-        shell: cmd {0}
+          wget https://github.com/libsdl-org/SDL/releases/download/release-2.32.2/SDL2-devel-2.32.2-mingw.tar.gz -O sdl2.tar.gz
+          wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-devel-2.8.1-mingw.tar.gz -O sdl2_mixer.tar.gz
+          mkdir -p Libs
+          tar -xvf sdl2_mixer.tar.gz
+          cd SDL2_mixer-*
+          sudo make cross
+          cd ../
+          tar -xvf sdl2.tar.gz
+          cd SDL2-*
+          sudo make cross
+
+      - name: build
         run: |
-          call "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"
-          powershell -NoProfile -ExecutionPolicy Bypass -File "BuildForWindows.ps1"
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=../mingwcc.cmake
+          make -j$(nproc)
