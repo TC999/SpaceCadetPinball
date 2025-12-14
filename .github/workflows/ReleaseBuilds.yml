@@ -53,22 +53,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: add i386 architecture
-        run: sudo dpkg --add-architecture i386
-
       - name: install dependencies
-        run: sudo apt-get update && sudo apt-get install -y mingw-w64 cmake language-pack-zh-hans
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64 cmake gcc-mingw-w64 language-pack-zh-hans
 
       - name: install sdl2 dll
         run: |
           wget https://github.com/libsdl-org/SDL/releases/download/release-2.32.2/SDL2-devel-2.32.2-mingw.tar.gz -O sdl2.tar.gz
           wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-devel-2.8.1-mingw.tar.gz -O sdl2_mixer.tar.gz
-          tar -xvf sdl2_mixer.tar.gz
-          cd SDL2_mixer-*
-          sudo make cross
-          cd ../
+          sudo mkdir -p /usr/local/i686-w64-mingw32
+          sudo mkdir -p /usr/local/x86_64-w64-mingw32
           tar -xvf sdl2.tar.gz
           cd SDL2-*
+          sudo make install
+          sudo make cross
+          cd ../
+          tar -xvf sdl2_mixer.tar.gz
+          cd SDL2_mixer-*
+          sudo make install
           sudo make cross
 
       - name: build
