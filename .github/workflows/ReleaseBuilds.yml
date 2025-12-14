@@ -3,6 +3,27 @@ name: Make Release Builds
 on: [workflow_dispatch]
 
 jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev cmake
+
+      - name: build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: bin/SpaceCadetPinball
+
   build-macos:
     runs-on: macos-12
     timeout-minutes: 15
@@ -21,3 +42,21 @@ jobs:
         with:
           name: mac-build
           path: SpaceCadetPinball-*-mac.dmg
+
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+  
+      - name: Find Visual Studio installation path
+        shell: pwsh
+        run: |
+          $vsPath = & 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe' -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          echo "VSINSTALLDIR=$vsPath" >> $env:GITHUB_ENV
+  
+      - name: Run PowerShell script under Developer Command Prompt
+        shell: cmd {0}
+        run: |
+          call "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"
+          powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\BuildForWindows.ps1"
